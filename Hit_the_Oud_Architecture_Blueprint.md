@@ -23,7 +23,7 @@
 *   **Resting String Colors:** Render courses 4, 5, and 6 (the bass pairs) using `#C48A5E` (Copper). Render courses 1, 2, and 3 (the treble pairs) using `#F4EBD9` (Ivory). Each course is drawn as two closely-spaced parallel lines offset around the zone center.
 *   **Active State Animation:** When a collision zone is triggered, both strings of the course render twin sine wave animations in `#FFC107` (Luminous Gold), slightly phase-offset from each other, with a slightly thicker stroke weight to emphasize the responsive motion.
 *   **Typography:** If displaying the live Hz frequency on screen, use a clean, modern sans-serif font in `#FFFFFF` with slight opacity, positioned cleanly in the corner of the active zone.
-*   **Open-String Pluck Buttons:** A column of six buttons labeled `Fa · La · Re · Sol · Do · Fa`, aligned adjacent to each course on the right edge of the canvas; clicking one plucks that course's pair at its open pitch with natural ring-out.
+*   **Open-String Pluck Buttons:** A dedicated rail of six buttons labeled `Fa · La · Re · Sol · Do · Fa`, positioned beside the canvas to the right of the strings (one per course zone, never overlapping them); clicking one plucks that course's pair at its open pitch with natural ring-out, during which the course renders the same twin gold sine animation and live Hz readout as a held string.
 
 ### 5. Build & Setup Architecture
 *   **Frontend Framework:** Use strict Vanilla JavaScript (HTML5, JS, CSS) for maximum canvas rendering performance without virtual DOM overhead.

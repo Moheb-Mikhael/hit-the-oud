@@ -143,22 +143,20 @@ function showStartError(message) {
 startButton.addEventListener("click", startSimulation);
 
 const NOTE_LABELS = ["Fa", "La", "Re", "Sol", "Do", "Fa"];
-const canvasWrap = document.querySelector(".canvas-wrap");
+const stringRail = document.getElementById("string-rail");
+const pluckDisplay = new Map();
 
 for (let c = 0; c < STRING_COUNT; c++) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "open-string-btn";
   button.textContent = NOTE_LABELS[c];
-  button.style.top = ((c + 0.5) / STRING_COUNT) * 100 + "%";
-  button.addEventListener(
-    "pointerdown",
-    (event) => {
-      event.preventDefault();
-      sendPluck(c, OPEN_FREQUENCIES[c]);
-    }
-  );
-  canvasWrap.appendChild(button);
+  button.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    sendPluck(c, OPEN_FREQUENCIES[c]);
+    pluckDisplay.set(c, performance.now() + 3000);
+  });
+  stringRail.appendChild(button);
 }
 
 function strokeSine(centerY, ph, cycles, amplitude) {
@@ -192,6 +190,14 @@ function renderFrame(now) {
     for (const state of pointers.values()) {
       if (state.string === s) active.push(state);
     }
+    const pluckExpiry = pluckDisplay.get(s);
+    if (pluckExpiry !== undefined) {
+      if (now >= pluckExpiry) {
+        pluckDisplay.delete(s);
+      } else {
+        active.push({ xCm: 0 });
+      }
+    }
 
     if (active.length === 0) {
       ctx.strokeStyle = s < 3 ? COLOR_BASS : COLOR_TREBLE;
@@ -221,7 +227,7 @@ function renderFrame(now) {
     ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
     active.forEach((state, k) => {
       const label = frequencyFor(s, state.xCm).toFixed(1) + " Hz";
-      ctx.fillText(label, CANVAS_WIDTH - 82, zoneTop + 8 + k * 16);
+      ctx.fillText(label, CANVAS_WIDTH - 12, zoneTop + 8 + k * 16);
     });
   }
 
