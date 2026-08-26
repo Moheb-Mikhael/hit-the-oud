@@ -13,12 +13,23 @@ namespace {
 constexpr float kMinFrequency = 40.0f;
 constexpr float kMaxFrequency = 1200.0f;
 constexpr float kGuardSamples = 8.0f;
-constexpr float kDecaySeconds = 3.0f;
+constexpr float kBassDecaySeconds = 3.6f;
+constexpr float kTrebleDecaySeconds = 2.4f;
+constexpr float kLowestCourseHz = 87.0f;
+constexpr float kHighestCourseHz = 350.0f;
 constexpr float kGlideSeconds = 0.004f;
 constexpr int kMixCapacityFrames = 4096;
 
 inline float clampFrequency(float frequency) {
     return std::min(std::max(frequency, kMinFrequency), kMaxFrequency);
+}
+
+inline float pitchPosition(float frequency) {
+    const float low = std::log2(kLowestCourseHz);
+    const float high = std::log2(kHighestCourseHz);
+    const float position =
+        (std::log2(clampFrequency(frequency)) - low) / (high - low);
+    return std::min(std::max(position, 0.0f), 1.0f);
 }
 
 inline float randomBipolar(unsigned int& state) {
@@ -39,8 +50,13 @@ StringVoice::StringVoice(float sampleRate, float frequency)
       glideCoeff_(0.0f),
       writePos_(0.0f),
       damping_(0.999f),
+      tone_(0.5f),
       rngState_(static_cast<unsigned int>(reinterpret_cast<uintptr_t>(this)) ^
-                static_cast<unsigned int>(frequency * 997.0f) ^ 0x9E3779B9u) {
+                static_cast<unsigned int>(frequency * 997.0f) ^ 0x9E3779B9u),
+      sustainActive_(false),
+      agcGain_(1.0f),
+      envelopeFast_(0.0f),
+      targetEnvelope_(0.0f) {
     const float maxDelay = sampleRate_ / kMinFrequency + kGuardSamples;
     capacity_ = static_cast<int>(std::ceil(maxDelay));
     buffer_ = new float[capacity_]();
@@ -60,8 +76,9 @@ unsigned int StringVoice::nextRandom() {
     return rngState_;
 }
 
-void StringVoice::pluck(float velocity) {
+void StringVoice::pluck(float velocity, float brightness) {
     const float amplitude = std::min(std::max(velocity, 0.05f), 1.0f);
+    const float bright = std::min(std::max(brightness, 0.0f), 1.0f);
     int length = static_cast<int>(delay_);
     if (length < 2) length = 2;
     if (length >= capacity_ - 1) length = capacity_ - 2;
@@ -69,19 +86,36 @@ void StringVoice::pluck(float velocity) {
     while (start < 0) {
         start += capacity_;
     }
-    float previous = randomBipolar(rngState_) * amplitude;
+    const int filterStages =
+        1 + static_cast<int>((1.0f - bright) * 3.0f + 0.5f);
+    float stageHistory[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     for (int i = 0; i < length; ++i) {
-        const float noise = randomBipolar(rngState_) * amplitude;
-        const float softened = 0.5f * (noise + previous);
-        previous = noise;
-        buffer_[(start + i) % capacity_] = softened;
+        float value = randomBipolar(rngState_) * amplitude;
+        for (int s = 0; s < filterStages; ++s) {
+            value = 0.5f * (value + stageHistory[s]);
+            stageHistory[s] = value;
+        }
+        buffer_[(start + i) % capacity_] = value;
     }
+    envelopeFast_ = 0.0f;
+    targetEnvelope_ = amplitude * 0.28f;
+    agcGain_ = 1.0f;
 }
 
 void StringVoice::setFrequency(float frequency) {
     const float clamped = clampFrequency(frequency);
     targetDelay_ = sampleRate_ / clamped;
-    damping_ = std::pow(10.0f, -3.0f / (clamped * kDecaySeconds));
+    const float decaySeconds = kBassDecaySeconds -
+        (kBassDecaySeconds - kTrebleDecaySeconds) * pitchPosition(clamped);
+    damping_ = std::pow(10.0f, -3.0f / (clamped * decaySeconds));
+    tone_ = 0.30f + 0.45f * pitchPosition(clamped);
+}
+
+void StringVoice::setSustain(bool active) {
+    sustainActive_ = active;
+    if (active) {
+        envelopeFast_ = 0.0f;
+    }
 }
 
 float StringVoice::frequency() const {
@@ -104,8 +138,21 @@ void StringVoice::render(float* out, int frames) {
         const float s0 = buffer_[index0];
         const float s1 = buffer_[index1];
         out[i] = s0 + (s1 - s0) * frac;
-        buffer_[static_cast<int>(writePos_)] =
-            damping_ * 0.5f * (s0 + s1);
+        const float stage1 = 0.5f * (s0 + s1);
+        const float stage2 = 0.5f * (stage1 + s0);
+        float feedback = tone_ * stage1 + (1.0f - tone_) * stage2;
+        if (sustainActive_) {
+            envelopeFast_ += 0.02f * (std::fabs(out[i]) - envelopeFast_);
+            const float error =
+                (targetEnvelope_ - envelopeFast_) / (targetEnvelope_ + 1e-9f);
+            agcGain_ *= 1.0f + std::min(std::max(error, -0.0006f), 0.0006f);
+            agcGain_ = std::min(std::max(agcGain_, 0.70f), 1.12f);
+            feedback *= agcGain_;
+        } else {
+            feedback *= damping_;
+        }
+        feedback = std::min(std::max(feedback, -1.0f), 1.0f);
+        buffer_[static_cast<int>(writePos_)] = feedback;
         writePos_ += 1.0f;
         if (writePos_ >= capacity) {
             writePos_ -= capacity;
@@ -144,11 +191,11 @@ public:
         delete[] scratch_;
     }
 
-    void pluckString(int index, float velocity) {
+    void pluckString(int index, float velocity, float brightness) {
         if (index < 0 || index >= stringCount_) {
             return;
         }
-        voices_[index]->pluck(velocity);
+        voices_[index]->pluck(velocity, brightness);
     }
 
     void setStringFrequency(int index, float frequency) {
@@ -156,6 +203,34 @@ public:
             return;
         }
         voices_[index]->setFrequency(frequency);
+    }
+
+    bool validCourse(int index) const {
+        return index >= 0 && index * 2 + 1 < stringCount_;
+    }
+
+    void pluckCourse(int index, float velocity, float brightness) {
+        if (!validCourse(index)) {
+            return;
+        }
+        voices_[index * 2]->pluck(velocity, brightness);
+        voices_[index * 2 + 1]->pluck(velocity, brightness);
+    }
+
+    void setCourseFrequency(int index, float frequency) {
+        if (!validCourse(index)) {
+            return;
+        }
+        voices_[index * 2]->setFrequency(frequency);
+        voices_[index * 2 + 1]->setFrequency(frequency);
+    }
+
+    void setCourseSustain(int index, bool active) {
+        if (!validCourse(index)) {
+            return;
+        }
+        voices_[index * 2]->setSustain(active);
+        voices_[index * 2 + 1]->setSustain(active);
     }
 
     float stringFrequency(int index) const {
@@ -209,6 +284,9 @@ EMSCRIPTEN_BINDINGS(oud_dsp) {
         .constructor<float, int>()
         .function("pluckString", &OudEngine::pluckString)
         .function("setStringFrequency", &OudEngine::setStringFrequency)
+        .function("pluckCourse", &OudEngine::pluckCourse)
+        .function("setCourseFrequency", &OudEngine::setCourseFrequency)
+        .function("setCourseSustain", &OudEngine::setCourseSustain)
         .function("stringFrequency", &OudEngine::stringFrequency)
         .property("stringCount", &OudEngine::stringCount)
         .function("render", &OudEngine::render)

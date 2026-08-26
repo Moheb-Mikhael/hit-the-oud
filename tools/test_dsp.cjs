@@ -66,7 +66,7 @@ for (let i = 0; i < 12; i++) {
 }
 console.log("PASS  open string tuning:", EXPECTED_OPEN.join(", "), "Hz");
 
-engine.pluckString(0, 1.0);
+engine.pluckString(0, 1.0, 0.6);
 let buf = renderSeconds(0.6);
 assert.ok(buf.every((x) => Number.isFinite(x)), "NaN/Inf in output");
 console.log("PASS  no NaN/Inf after pluck");
@@ -76,13 +76,13 @@ const est = estimateFrequency(buf, Math.floor(0.05 * SR), Math.floor(0.45 * SR))
 assert.ok(Math.abs(est - 87) < 6, `string 0 pitch: estimated ${est.toFixed(1)} Hz, want ~87`);
 console.log(`PASS  low-string pitch estimate: ${est.toFixed(1)} Hz (~87)`);
 
-engine.pluckString(11, 1.0);
+engine.pluckString(11, 1.0, 0.6);
 buf = renderSeconds(0.5);
 const estHi = estimateFrequency(buf, Math.floor(0.02 * SR), Math.floor(0.45 * SR));
 assert.ok(Math.abs(estHi - 350) < 18, `voice 11 pitch: estimated ${estHi.toFixed(1)} Hz, want ~350`);
 console.log(`PASS  high-string pitch estimate: ${estHi.toFixed(1)} Hz (~350)`);
 
-engine.pluckString(2, 1.0);
+engine.pluckString(2, 1.0, 0.6);
 const early = renderSeconds(4.0);
 const rmsEarly = rms(early, 0, SR >> 1);
 const rmsLate = rms(early, SR * 3, SR * 4);
@@ -92,7 +92,7 @@ assert.ok(rmsLate < 0.05, `not settled near silence: late RMS=${rmsLate.toFixed(
 console.log(`PASS  natural decay: RMS ${rmsEarly.toFixed(4)} -> ${rmsLate.toFixed(4)} over ~3s`);
 
 engine.setStringFrequency(11, 520);
-engine.pluckString(11, 1.0);
+engine.pluckString(11, 1.0, 0.6);
 renderSeconds(0.25);
 engine.setStringFrequency(11, 300);
 renderSeconds(0.06);
@@ -112,15 +112,42 @@ for (let i = 1; i < postGlide.length; i++) {
 assert.ok(maxJump < 0.35, `discontinuity during glide: jump=${maxJump.toFixed(3)}`);
 console.log(`PASS  interpolated buffer resize is click-free (max sample jump ${maxJump.toFixed(3)})`);
 
-for (let s = 0; s < 12; s++) engine.pluckString(s, 0.9);
+engine.setCourseFrequency(0, 98);
+engine.pluckCourse(0, 1.0, 0.6);
+engine.setCourseSustain(0, true);
+const sustainBuf = renderSeconds(4.0);
+const rmsSustained = rms(sustainBuf, SR * 3, SR * 4);
+assert.ok(rmsSustained > 0.015, `sustain collapsed: RMS=${rmsSustained.toFixed(4)} at t=3-4s`);
+let susPeak = 0;
+let susFinite = true;
+for (const x of sustainBuf) {
+  susPeak = Math.max(susPeak, Math.abs(x));
+  if (!Number.isFinite(x)) susFinite = false;
+}
+assert.ok(susFinite, "NaN/Inf during sustained render");
+assert.ok(susPeak < 1.2, `sustain unstable: peak=${susPeak.toFixed(3)}`);
+engine.setCourseSustain(0, false);
+const released = renderSeconds(3.5);
+const rmsReleased = rms(released, SR * 2, SR * 3);
+assert.ok(
+  rmsReleased < rmsSustained / 5,
+  `release damping failed: ${rmsReleased.toFixed(4)} vs sustained ${rmsSustained.toFixed(4)}`
+);
+console.log(`PASS  infinite sustain holds (RMS ${rmsSustained.toFixed(3)}) and releases into natural decay (${rmsReleased.toFixed(4)})`);
+
+for (let s = 0; s < 12; s++) engine.pluckString(s, 0.9, 0.6);
 const chord = renderSeconds(0.3);
 const rmsChord = rms(chord, 0, chord.length - 1);
 assert.ok(rmsChord > 0.005, `polyphonic mix too quiet: ${rmsChord}`);
 console.log(`PASS  full 6-string polyphony renders (RMS ${rmsChord.toFixed(4)})`);
 
-engine.pluckString(-1, 1);
-engine.pluckString(99, 1);
+engine.pluckString(-1, 1, 0.5);
+engine.pluckString(99, 1, 0.5);
 engine.setStringFrequency(42, 999);
+engine.pluckCourse(-2, 1, 0.5);
+engine.pluckCourse(17, 1, 0.5);
+engine.setCourseFrequency(99, 440);
+engine.setCourseSustain(7, false);
 renderSeconds(0.1);
 console.log("PASS  out-of-range indices are safely ignored");
 

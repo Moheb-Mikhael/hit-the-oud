@@ -59,6 +59,20 @@ processor.port.onmessage({
 });
 for (let block = 0; block < 20; block++) processor.process([], outputs);
 
+processor.port.onmessage({
+  data: {
+    type: "pluck",
+    string: 2,
+    frequency: 196,
+    velocity: 0.55,
+    bright: false,
+    sustain: true,
+  },
+});
+for (let block = 0; block < 40; block++) processor.process([], outputs);
+processor.port.onmessage({ data: { type: "release", string: 2 } });
+for (let block = 0; block < 10; block++) processor.process([], outputs);
+
 processor.port.onmessage({ data: { type: "garbage-event" } });
 processor.port.onmessage({ data: null });
 processor.port.onmessage({

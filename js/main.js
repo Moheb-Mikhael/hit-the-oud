@@ -52,14 +52,37 @@ function frequencyFor(stringIndex, xCm) {
   );
 }
 
-function sendPluck(stringIndex, frequency) {
+function sendPluck(course, frequency, velocity, bright, sustain) {
   if (!oudNode || !simulationReady) return;
   oudNode.port.postMessage({
     type: "pluck",
-    string: stringIndex,
+    string: course,
     frequency,
-    velocity: 0.9,
+    velocity,
+    bright,
+    sustain,
   });
+}
+
+function sendRelease(course) {
+  if (!oudNode || !simulationReady) return;
+  oudNode.port.postMessage({ type: "release", string: course });
+}
+
+const holdCounts = new Map();
+
+function holdInc(course) {
+  holdCounts.set(course, (holdCounts.get(course) || 0) + 1);
+}
+
+function holdDec(course) {
+  const remaining = (holdCounts.get(course) || 0) - 1;
+  if (remaining > 0) {
+    holdCounts.set(course, remaining);
+  } else {
+    holdCounts.delete(course);
+    sendRelease(course);
+  }
 }
 
 function sendGlissando(stringIndex, frequency) {
@@ -78,8 +101,14 @@ canvas.addEventListener("pointerdown", (event) => {
   const point = eventToCanvasPoint(event);
   const stringIndex = zoneIndexFromY(point.y);
   const xCm = xCentimeters(point.x);
-  pointers.set(event.pointerId, { string: stringIndex, xCm });
-  sendPluck(stringIndex, frequencyFor(stringIndex, xCm));
+  pointers.set(event.pointerId, {
+    string: stringIndex,
+    xCm,
+    lastY: point.y,
+    lastTime: event.timeStamp,
+  });
+  holdInc(stringIndex);
+  sendPluck(stringIndex, frequencyFor(stringIndex, xCm), 0.75, true, true);
 });
 
 canvas.addEventListener("pointermove", (event) => {
@@ -89,17 +118,28 @@ canvas.addEventListener("pointermove", (event) => {
   const point = eventToCanvasPoint(event);
   const stringIndex = zoneIndexFromY(point.y);
   state.xCm = xCentimeters(point.x);
+  const elapsed = Math.max(event.timeStamp - state.lastTime, 1);
+  const deltaY = point.y - state.lastY;
+  state.lastY = point.y;
+  state.lastTime = event.timeStamp;
+  const speed = Math.abs(deltaY) / elapsed;
   const frequency = frequencyFor(stringIndex, state.xCm);
   if (stringIndex !== state.string) {
+    const strokeVelocity = Math.min(Math.max(speed / 2.2, 0.18), 1);
+    holdDec(state.string);
     state.string = stringIndex;
-    sendPluck(stringIndex, frequency);
+    holdInc(stringIndex);
+    sendPluck(stringIndex, frequency, strokeVelocity, deltaY >= 0, true);
   } else {
     sendGlissando(stringIndex, frequency);
   }
 });
 
 function releasePointer(event) {
+  const state = pointers.get(event.pointerId);
+  if (!state) return;
   pointers.delete(event.pointerId);
+  holdDec(state.string);
 }
 
 canvas.addEventListener("pointerup", releasePointer);
@@ -153,7 +193,7 @@ for (let c = 0; c < STRING_COUNT; c++) {
   button.textContent = NOTE_LABELS[c];
   button.addEventListener("pointerdown", (event) => {
     event.preventDefault();
-    sendPluck(c, OPEN_FREQUENCIES[c]);
+    sendPluck(c, OPEN_FREQUENCIES[c], 0.9, false, false);
     pluckDisplay.set(c, performance.now() + 3000);
   });
   stringRail.appendChild(button);

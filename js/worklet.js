@@ -46,13 +46,26 @@ class OudProcessor extends AudioWorkletProcessor {
         if (course < 0 || course >= COURSE_COUNT) {
           break;
         }
-        const velocity = Number(message.velocity) || 0.9;
-        this.engine.pluckString(course * 2, velocity);
-        this.engine.pluckString(course * 2 + 1, velocity);
         if (typeof message.frequency === "number") {
-          this.engine.setStringFrequency(course * 2, message.frequency);
-          this.engine.setStringFrequency(course * 2 + 1, message.frequency);
+          this.engine.setCourseFrequency(course, message.frequency);
         }
+        const velocity = Number(message.velocity);
+        this.engine.pluckCourse(
+          course,
+          Number.isFinite(velocity) && velocity > 0 ? velocity : 0.8,
+          message.bright === false ? 0 : 1
+        );
+        if (message.sustain) {
+          this.engine.setCourseSustain(course, true);
+        }
+        break;
+      }
+      case "release": {
+        const course = message.string | 0;
+        if (course < 0 || course >= COURSE_COUNT) {
+          break;
+        }
+        this.engine.setCourseSustain(course, false);
         break;
       }
       case "glissando": {
@@ -61,8 +74,7 @@ class OudProcessor extends AudioWorkletProcessor {
           if (course < 0 || course >= COURSE_COUNT) {
             break;
           }
-          this.engine.setStringFrequency(course * 2, message.frequency);
-          this.engine.setStringFrequency(course * 2 + 1, message.frequency);
+          this.engine.setCourseFrequency(course, message.frequency);
         }
         break;
       }

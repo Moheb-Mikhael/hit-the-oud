@@ -8,8 +8,9 @@ public:
     StringVoice(const StringVoice&) = delete;
     StringVoice& operator=(const StringVoice&) = delete;
 
-    void pluck(float velocity);
+    void pluck(float velocity, float brightness);
     void setFrequency(float frequency);
+    void setSustain(bool active);
     void render(float* out, int frames);
 
     float frequency() const;
@@ -25,5 +26,11 @@ private:
     float glideCoeff_;
     float writePos_;
     float damping_;
+    float tone_;
     unsigned int rngState_;
+
+    bool sustainActive_;
+    float agcGain_;
+    float envelopeFast_;
+    float targetEnvelope_;
 };
