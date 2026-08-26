@@ -97,3 +97,31 @@ body {
   max-width: 80%;
   text-align: center;
 }
+
+.open-string-btn {
+  position: absolute;
+  right: 10px;
+  transform: translateY(-50%);
+  appearance: none;
+  width: 58px;
+  padding: 6px 0;
+  border: 1px solid rgba(255, 193, 7, 0.85);
+  border-radius: 999px;
+  background: rgba(24, 17, 14, 0.72);
+  color: #ffc107;
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  z-index: 2;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.open-string-btn:hover {
+  background: #ffc107;
+  color: #18110e;
+}
+
+.open-string-btn:active {
+  transform: translateY(-50%) scale(0.93);
+}

@@ -126,10 +126,10 @@ public:
           scratch_(nullptr),
           masterGain_(0.7f) {
         voices_ = new StringVoice*[stringCount_];
-        const float openFrequencies[6] = {87.0f, 110.0f, 147.0f, 196.0f, 261.0f, 350.0f};
+        const float courseFrequencies[6] = {87.0f, 110.0f, 147.0f, 196.0f, 261.0f, 350.0f};
         for (int i = 0; i < stringCount_; ++i) {
             voices_[i] = new StringVoice(
-                sampleRate_, openFrequencies[i % 6]);
+                sampleRate_, courseFrequencies[(i >> 1) % 6]);
         }
         mix_ = new float[kMixCapacityFrames]();
         scratch_ = new float[kMixCapacityFrames]();

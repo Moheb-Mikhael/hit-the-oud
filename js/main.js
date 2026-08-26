@@ -41,7 +41,7 @@ function eventToCanvasPoint(event) {
 }
 
 function xCentimeters(px) {
-  const cm = (px / CANVAS_WIDTH) * MAX_PRESS_CM;
+  const cm = ((CANVAS_WIDTH - px) / CANVAS_WIDTH) * MAX_PRESS_CM;
   return Math.min(Math.max(cm, 0), MAX_PRESS_CM);
 }
 
@@ -142,6 +142,42 @@ function showStartError(message) {
 
 startButton.addEventListener("click", startSimulation);
 
+const NOTE_LABELS = ["Fa", "La", "Re", "Sol", "Do", "Fa"];
+const canvasWrap = document.querySelector(".canvas-wrap");
+
+for (let c = 0; c < STRING_COUNT; c++) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "open-string-btn";
+  button.textContent = NOTE_LABELS[c];
+  button.style.top = ((c + 0.5) / STRING_COUNT) * 100 + "%";
+  button.addEventListener(
+    "pointerdown",
+    (event) => {
+      event.preventDefault();
+      sendPluck(c, OPEN_FREQUENCIES[c]);
+    }
+  );
+  canvasWrap.appendChild(button);
+}
+
+function strokeSine(centerY, ph, cycles, amplitude) {
+  ctx.beginPath();
+  const STEPS = 240;
+  for (let i = 0; i <= STEPS; i++) {
+    const u = i / STEPS;
+    const envelope = Math.sin(Math.PI * u);
+    const y =
+      centerY + Math.sin(u * cycles * TWO_PI + ph) * amplitude * envelope;
+    if (i === 0) {
+      ctx.moveTo(0, y);
+    } else {
+      ctx.lineTo(u * CANVAS_WIDTH, y);
+    }
+  }
+  ctx.stroke();
+}
+
 function renderFrame(now) {
   const dt = Math.min(Math.max((now - lastFrameTime) / 1000, 0), 0.05);
   lastFrameTime = now;
@@ -160,10 +196,12 @@ function renderFrame(now) {
     if (active.length === 0) {
       ctx.strokeStyle = s < 3 ? COLOR_BASS : COLOR_TREBLE;
       ctx.lineWidth = 1.6;
-      ctx.beginPath();
-      ctx.moveTo(0, centerY);
-      ctx.lineTo(CANVAS_WIDTH, centerY);
-      ctx.stroke();
+      for (const offset of [-3, 3]) {
+        ctx.beginPath();
+        ctx.moveTo(0, centerY + offset);
+        ctx.lineTo(CANVAS_WIDTH, centerY + offset);
+        ctx.stroke();
+      }
       continue;
     }
 
@@ -174,21 +212,8 @@ function renderFrame(now) {
 
     ctx.strokeStyle = COLOR_ACTIVE;
     ctx.lineWidth = 3;
-    ctx.beginPath();
-    const STEPS = 240;
-    for (let i = 0; i <= STEPS; i++) {
-      const u = i / STEPS;
-      const envelope = Math.sin(Math.PI * u);
-      const y =
-        centerY +
-        Math.sin(u * cycles * TWO_PI + phase[s]) * 9 * envelope;
-      if (i === 0) {
-        ctx.moveTo(0, y);
-      } else {
-        ctx.lineTo(u * CANVAS_WIDTH, y);
-      }
-    }
-    ctx.stroke();
+    strokeSine(centerY - 3, phase[s], cycles, 9);
+    strokeSine(centerY + 3, phase[s] - 0.35, cycles, 7.6);
 
     ctx.font = "13px 'Segoe UI', system-ui, sans-serif";
     ctx.textAlign = "right";
@@ -196,7 +221,7 @@ function renderFrame(now) {
     ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
     active.forEach((state, k) => {
       const label = frequencyFor(s, state.xCm).toFixed(1) + " Hz";
-      ctx.fillText(label, CANVAS_WIDTH - 12, zoneTop + 8 + k * 16);
+      ctx.fillText(label, CANVAS_WIDTH - 82, zoneTop + 8 + k * 16);
     });
   }
 

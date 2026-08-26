@@ -10,7 +10,7 @@ function main(factoryResult) {
 function runAll(Module) {
   assert.ok(typeof Module.OudEngine === "function", "OudEngine missing from module");
   const SR = 48000;
-  const engine = new Module.OudEngine(SR, 6);
+  const engine = new Module.OudEngine(SR, 12);
 
 function rms(buf, start, end) {
   let sum = 0;
@@ -52,8 +52,12 @@ function renderSeconds(seconds) {
   return out;
 }
 
-const EXPECTED_OPEN = [87, 110, 147, 196, 261, 350];
-for (let i = 0; i < 6; i++) {
+const COURSE_OPEN = [87, 110, 147, 196, 261, 350];
+const EXPECTED_OPEN = [];
+for (let c = 0; c < COURSE_OPEN.length; c++) {
+  EXPECTED_OPEN.push(COURSE_OPEN[c], COURSE_OPEN[c]);
+}
+for (let i = 0; i < 12; i++) {
   const f = engine.stringFrequency(i);
   assert.ok(
     Math.abs(f - EXPECTED_OPEN[i]) < 0.05,
@@ -72,10 +76,10 @@ const est = estimateFrequency(buf, Math.floor(0.05 * SR), Math.floor(0.45 * SR))
 assert.ok(Math.abs(est - 87) < 6, `string 0 pitch: estimated ${est.toFixed(1)} Hz, want ~87`);
 console.log(`PASS  low-string pitch estimate: ${est.toFixed(1)} Hz (~87)`);
 
-engine.pluckString(5, 1.0);
+engine.pluckString(11, 1.0);
 buf = renderSeconds(0.5);
 const estHi = estimateFrequency(buf, Math.floor(0.02 * SR), Math.floor(0.45 * SR));
-assert.ok(Math.abs(estHi - 350) < 18, `string 5 pitch: estimated ${estHi.toFixed(1)} Hz, want ~350`);
+assert.ok(Math.abs(estHi - 350) < 18, `voice 11 pitch: estimated ${estHi.toFixed(1)} Hz, want ~350`);
 console.log(`PASS  high-string pitch estimate: ${estHi.toFixed(1)} Hz (~350)`);
 
 engine.pluckString(2, 1.0);
@@ -87,10 +91,10 @@ assert.ok(rmsLate < rmsEarly / 8, `decay insufficient: early=${rmsEarly.toFixed(
 assert.ok(rmsLate < 0.05, `not settled near silence: late RMS=${rmsLate.toFixed(4)}`);
 console.log(`PASS  natural decay: RMS ${rmsEarly.toFixed(4)} -> ${rmsLate.toFixed(4)} over ~3s`);
 
-engine.setStringFrequency(5, 520);
-engine.pluckString(5, 1.0);
+engine.setStringFrequency(11, 520);
+engine.pluckString(11, 1.0);
 renderSeconds(0.25);
-engine.setStringFrequency(5, 300);
+engine.setStringFrequency(11, 300);
 renderSeconds(0.06);
 const postGlide = renderSeconds(0.45);
 const estGlide = estimateFrequency(
@@ -108,7 +112,7 @@ for (let i = 1; i < postGlide.length; i++) {
 assert.ok(maxJump < 0.35, `discontinuity during glide: jump=${maxJump.toFixed(3)}`);
 console.log(`PASS  interpolated buffer resize is click-free (max sample jump ${maxJump.toFixed(3)})`);
 
-for (let s = 0; s < 6; s++) engine.pluckString(s, 0.9);
+for (let s = 0; s < 12; s++) engine.pluckString(s, 0.9);
 const chord = renderSeconds(0.3);
 const rmsChord = rms(chord, 0, chord.length - 1);
 assert.ok(rmsChord > 0.005, `polyphonic mix too quiet: ${rmsChord}`);

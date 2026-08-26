@@ -1,7 +1,8 @@
 import createOudModule from "../build/oud_dsp.js";
 
 const RENDER_QUANTUM = 128;
-const STRING_COUNT = 6;
+const COURSE_COUNT = 6;
+const VOICE_COUNT = 12;
 
 class OudProcessor extends AudioWorkletProcessor {
   constructor() {
@@ -15,7 +16,7 @@ class OudProcessor extends AudioWorkletProcessor {
       locateFile: (path) => new URL("../build/" + path, import.meta.url).href,
     })
       .then((Module) => {
-        this.engine = new Module.OudEngine(sampleRate, STRING_COUNT);
+        this.engine = new Module.OudEngine(sampleRate, VOICE_COUNT);
         this.view = this.engine.outputView(RENDER_QUANTUM);
         const queued = this.pendingMessages;
         this.pendingMessages = null;
@@ -41,16 +42,27 @@ class OudProcessor extends AudioWorkletProcessor {
     }
     switch (message.type) {
       case "pluck": {
-        const stringIndex = message.string | 0;
-        this.engine.pluckString(stringIndex, Number(message.velocity) || 0.9);
+        const course = message.string | 0;
+        if (course < 0 || course >= COURSE_COUNT) {
+          break;
+        }
+        const velocity = Number(message.velocity) || 0.9;
+        this.engine.pluckString(course * 2, velocity);
+        this.engine.pluckString(course * 2 + 1, velocity);
         if (typeof message.frequency === "number") {
-          this.engine.setStringFrequency(stringIndex, message.frequency);
+          this.engine.setStringFrequency(course * 2, message.frequency);
+          this.engine.setStringFrequency(course * 2 + 1, message.frequency);
         }
         break;
       }
       case "glissando": {
         if (typeof message.frequency === "number") {
-          this.engine.setStringFrequency(message.string | 0, message.frequency);
+          const course = message.string | 0;
+          if (course < 0 || course >= COURSE_COUNT) {
+            break;
+          }
+          this.engine.setStringFrequency(course * 2, message.frequency);
+          this.engine.setStringFrequency(course * 2 + 1, message.frequency);
         }
         break;
       }
