@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hit the Oud</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <main class="stage">
+      <header class="masthead">
+        <h1>Hit the Oud</h1>
+        <p>Fretless Karplus-Strong synthesis · drag across the neck to glissando</p>
+      </header>
+      <div class="canvas-wrap">
+        <canvas id="oud-canvas" width="1200" height="300"></canvas>
+        <div id="overlay" class="overlay">
+          <button id="start-btn" type="button">Click to Start Simulation</button>
+          <p id="overlay-status" role="status"></p>
+        </div>
+      </div>
+    </main>
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

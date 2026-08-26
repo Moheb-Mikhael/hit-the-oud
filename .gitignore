@@ -1,0 +1,14 @@
+build/*
+!build/oud_dsp.js
+
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+.ninja_deps
+.ninja_log
+build.ninja
+
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
