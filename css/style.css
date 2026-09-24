@@ -133,3 +133,40 @@ body {
 .open-string-btn:active {
   transform: scale(0.93);
 }
+
+.maqam-bar {
+  display: flex;
+  gap: 18px;
+  align-items: flex-end;
+  margin: 0 0 14px;
+  padding: 12px 16px;
+  background: #18110e;
+  border-radius: 10px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+.maqam-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: rgba(244, 235, 217, 0.6);
+}
+
+.maqam-field select {
+  appearance: none;
+  background: #221a14;
+  color: #f4ebd9;
+  border: 1px solid rgba(255, 193, 7, 0.55);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.maqam-field select:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

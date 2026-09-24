@@ -1,3 +1,5 @@
+import { NECK_CM, TONICS, fullMapNotes, maqamNotes } from "./maqam.js";
+
 const CANVAS_WIDTH = 1200;
 const CANVAS_HEIGHT = 300;
 const STRING_COUNT = 6;
@@ -26,6 +28,73 @@ let simulationReady = false;
 const pointers = new Map();
 const phase = new Float32Array(STRING_COUNT);
 let lastFrameTime = 0;
+
+const maqamSelect = document.getElementById("maqam-select");
+const tonicSelect = document.getElementById("tonic-select");
+let activeMaqam = "All";
+let activeTonic = 0;
+
+maqamSelect.addEventListener("change", () => {
+  activeMaqam = maqamSelect.value;
+  tonicSelect.disabled = activeMaqam === "All";
+});
+
+tonicSelect.addEventListener("change", () => {
+  activeTonic = Number(tonicSelect.value) || 0;
+});
+
+function courseNotesFor(course) {
+  if (activeMaqam === "All") {
+    return fullMapNotes(OPEN_FREQUENCIES[course]);
+  }
+  return maqamNotes(OPEN_FREQUENCIES[course], activeMaqam, activeTonic);
+}
+
+function drawNoteLabel(px, centerY, label) {
+  ctx.font = "9px 'Segoe UI', system-ui, sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+  ctx.fillText(label, px + 10, centerY);
+}
+
+function drawNoteCircles(course, centerY) {
+  const notes = courseNotesFor(course);
+  for (const note of notes) {
+    const px = CANVAS_WIDTH - (note.x / NECK_CM) * CANVAS_WIDTH;
+    if (note.tonic) {
+      ctx.strokeStyle = COLOR_ACTIVE;
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.arc(px, centerY, 9, 0, TWO_PI);
+      ctx.stroke();
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(px, centerY, 5, 0, TWO_PI);
+      ctx.stroke();
+      drawNoteLabel(px, centerY, note.label);
+    } else if (note.kind === "natural") {
+      ctx.strokeStyle = "rgba(244, 235, 217, 0.85)";
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(px, centerY, 6, 0, TWO_PI);
+      ctx.stroke();
+    } else if (note.kind === "half-bemol") {
+      ctx.fillStyle = COLOR_BASS;
+      ctx.beginPath();
+      ctx.arc(px, centerY, 5.5, 0, TWO_PI);
+      ctx.fill();
+      drawNoteLabel(px, centerY, note.label);
+    } else {
+      ctx.strokeStyle = COLOR_ACTIVE;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(px, centerY, 7, 0, TWO_PI);
+      ctx.stroke();
+      drawNoteLabel(px, centerY, note.label);
+    }
+  }
+}
 
 function zoneIndexFromY(y) {
   const index = Math.floor(y / ZONE_HEIGHT);
@@ -101,14 +170,9 @@ canvas.addEventListener("pointerdown", (event) => {
   const point = eventToCanvasPoint(event);
   const stringIndex = zoneIndexFromY(point.y);
   const xCm = xCentimeters(point.x);
-  pointers.set(event.pointerId, {
-    string: stringIndex,
-    xCm,
-    lastY: point.y,
-    lastTime: event.timeStamp,
-  });
+  pointers.set(event.pointerId, { string: stringIndex, xCm });
   holdInc(stringIndex);
-  sendPluck(stringIndex, frequencyFor(stringIndex, xCm), 0.75, true, true);
+  sendPluck(stringIndex, frequencyFor(stringIndex, xCm), 0.8, true, true);
 });
 
 canvas.addEventListener("pointermove", (event) => {
@@ -118,18 +182,12 @@ canvas.addEventListener("pointermove", (event) => {
   const point = eventToCanvasPoint(event);
   const stringIndex = zoneIndexFromY(point.y);
   state.xCm = xCentimeters(point.x);
-  const elapsed = Math.max(event.timeStamp - state.lastTime, 1);
-  const deltaY = point.y - state.lastY;
-  state.lastY = point.y;
-  state.lastTime = event.timeStamp;
-  const speed = Math.abs(deltaY) / elapsed;
   const frequency = frequencyFor(stringIndex, state.xCm);
   if (stringIndex !== state.string) {
-    const strokeVelocity = Math.min(Math.max(speed / 2.2, 0.18), 1);
     holdDec(state.string);
     state.string = stringIndex;
     holdInc(stringIndex);
-    sendPluck(stringIndex, frequency, strokeVelocity, deltaY >= 0, true);
+    sendPluck(stringIndex, frequency, 0.8, true, true);
   } else {
     sendGlissando(stringIndex, frequency);
   }
@@ -193,7 +251,7 @@ for (let c = 0; c < STRING_COUNT; c++) {
   button.textContent = NOTE_LABELS[c];
   button.addEventListener("pointerdown", (event) => {
     event.preventDefault();
-    sendPluck(c, OPEN_FREQUENCIES[c], 0.9, false, false);
+    sendPluck(c, OPEN_FREQUENCIES[c], 0.8, true, false);
     pluckDisplay.set(c, performance.now() + 3000);
   });
   stringRail.appendChild(button);
@@ -238,6 +296,7 @@ function renderFrame(now) {
         active.push({ xCm: 0 });
       }
     }
+    drawNoteCircles(s, centerY);
 
     if (active.length === 0) {
       ctx.strokeStyle = s < 3 ? COLOR_BASS : COLOR_TREBLE;

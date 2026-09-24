@@ -12,6 +12,39 @@
         <h1>Hit the Oud</h1>
         <p>Fretless Karplus-Strong synthesis · drag across the neck to glissando</p>
       </header>
+      <div class="maqam-bar">
+        <label class="maqam-field">Maqam
+          <select id="maqam-select">
+            <option value="All">All notes</option>
+            <option value="Rast">Rast</option>
+            <option value="Bayati">Bayati</option>
+            <option value="Hijaz">Hijaz</option>
+            <option value="Saba">Saba</option>
+            <option value="Nahawand">Nahawand</option>
+            <option value="Kurd">Kurd</option>
+            <option value="Ajam">Ajam</option>
+            <option value="Sikah">Sikah</option>
+          </select>
+        </label>
+        <label class="maqam-field">starts on
+          <select id="tonic-select" disabled>
+            <option value="0">Do</option>
+            <option value="1">Reb</option>
+            <option value="2">Re</option>
+            <option value="3">Mib</option>
+            <option value="4">Mi</option>
+            <option value="5">Fa</option>
+            <option value="6">Solb</option>
+            <option value="7">Sol</option>
+            <option value="8">Lab</option>
+            <option value="9">La</option>
+            <option value="10">Sib</option>
+            <option value="11">Si</option>
+            <option value="12">Mi½</option>
+            <option value="13">Si½</option>
+          </select>
+        </label>
+      </div>
       <div class="canvas-wrap">
         <canvas id="oud-canvas" width="1200" height="300"></canvas>
         <div class="string-rail" id="string-rail"></div>
