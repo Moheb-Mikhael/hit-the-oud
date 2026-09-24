@@ -16,6 +16,7 @@
 *   **Typography & UI:** Display live Hz frequency in modern sans-serif #FFFFFF. Include a rail of six buttons labeled `Fa · La · Re · Sol · Do · Fa` positioned to the right of the strings; clicking plucks the open course.
 *   **Version 2 Eastern Note Map:** Every course renders small circular markers at the exact physical note positions (x = 60·(1 − f_open / f)): ivory rings for natural notes (Do Re Mi Fa Sol La Si), gold rings with short labels for bemols (Sib), copper dots with short labels for half-bemols (La½). Markers are visual guides only; playing remains free glissando.
 *   **Version 2 Maqam Learning Mode:** A control strip with two dropdowns (Maqam: Rast, Bayati, Hijaz, Saba, Nahawand, Kurd, Ajam, Sikah; Tonic: 12 chromatic notes plus Mi½ and Si½). Selecting a pair hides all non-maqam circles and highlights only that maqam's degrees, with the tonic double-ringed. Note names use proper maqam spelling (e.g., Hijaz on Re shows Fa#).
+*   **Octave Coloring (maqam mode only):** Circle rings/fills take rainbow octave colors by sounding pitch (Octave 2 `#E5484D` red, Octave 3 `#FF9E2C` orange, Octave 4 `#FFE14D` yellow, Octave 5 `#4FC978` green; octave changes at C). Ring shape still encodes the accidental and the tonic keeps its double ring; the live Hz readout matches its octave color. Full-map mode keeps kind-based styling.
 
 ### 3. Interaction Mechanics (Risha & Left Hand)
 *   **Browser Audio API:** Bind the compiled WebAssembly C++ loop strictly to an AudioWorklet.

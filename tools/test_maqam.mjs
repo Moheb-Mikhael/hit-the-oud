@@ -3,8 +3,11 @@ import {
   NECK_CM,
   MAQAMAT,
   TONICS,
+  OCTAVE_COLORS,
   fullMapNotes,
   maqamNotes,
+  octaveOf,
+  octaveColor,
 } from "../js/maqam.js";
 
 const OPEN = [87.0, 110.0, 147.0, 196.0, 261.0, 350.0];
@@ -86,5 +89,43 @@ console.log("PASS  exhaustive sweep: 8 maqams x 14 tonics x 6 courses all in-bou
 assert.deepStrictEqual(maqamNotes(196, "Nope", 0), [], "unknown maqam -> []");
 assert.deepStrictEqual(maqamNotes(196, "Rast", 99), [], "unknown tonic -> []");
 console.log("PASS  invalid maqam/tonic safely returns no notes");
+
+assert.strictEqual(octaveOf(87), 2, "F2 -> octave 2");
+assert.strictEqual(octaveOf(110), 2, "A2 -> octave 2");
+assert.strictEqual(octaveOf(246.94), 3, "B3 -> octave 3");
+assert.strictEqual(octaveOf(261.63), 4, "C4 -> octave 4");
+assert.strictEqual(octaveOf(350), 4, "F4 -> octave 4");
+assert.strictEqual(octaveOf(440), 4, "A4 -> octave 4");
+assert.strictEqual(octaveOf(523.25), 5, "C5 -> octave 5");
+assert.strictEqual(octaveColor(40), OCTAVE_COLORS[2], "low clamp");
+assert.strictEqual(octaveColor(3000), OCTAVE_COLORS[5], "high clamp");
+assert.deepStrictEqual(
+  Object.values(OCTAVE_COLORS),
+  ["#E5484D", "#FF9E2C", "#FFE14D", "#4FC978"],
+  "rainbow palette order"
+);
+console.log("PASS  octave numbering, boundaries, palette clamping");
+
+for (let c = 0; c < OPEN.length; c++) {
+  for (const n of fullMapNotes(OPEN[c])) {
+    assert.ok(Number.isFinite(n.freq), "full map note freq");
+    assert.ok([2, 3, 4, 5].includes(octaveOf(n.freq)), `octave in range, got ${octaveOf(n.freq)}`);
+  }
+}
+const rastDo = maqamNotes(130.81, "Rast", 0);
+assert.ok(rastDo[0].tonic, "first Rast note is tonic");
+assert.strictEqual(octaveOf(rastDo[0].freq), 3, "Rast Do tonic in octave 3");
+for (const maqam of Object.keys(MAQAMAT)) {
+  for (let t = 0; t < TONICS.length; t++) {
+    for (let c = 0; c < OPEN.length; c++) {
+      for (const n of maqamNotes(OPEN[c], maqam, t)) {
+        assert.ok(Number.isFinite(n.freq), "maqam note freq");
+        assert.ok([2, 3, 4, 5].includes(octaveOf(n.freq)), "maqam octave in range");
+        assert.ok(/^#[0-9A-F]{6}$/i.test(octaveColor(n.freq)), "valid octave color");
+      }
+    }
+  }
+}
+console.log("PASS  every note carries a freq mapping to octaves 2-5 with a valid color");
 
 console.log("\nALL MAQAM THEORY TESTS PASSED");

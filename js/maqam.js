@@ -1,6 +1,25 @@
 export const STRING_CM = 60;
 export const NECK_CM = 20;
 
+export const OCTAVE_COLORS = {
+  2: "#E5484D",
+  3: "#FF9E2C",
+  4: "#FFE14D",
+  5: "#4FC978",
+};
+
+export function octaveOf(freq) {
+  return Math.floor((69 + 12 * Math.log2(freq / 440)) / 12 + 1e-4) - 1;
+}
+
+export function octaveColor(freq) {
+  const octaves = Object.keys(OCTAVE_COLORS).map(Number);
+  const lo = Math.min(...octaves);
+  const hi = Math.max(...octaves);
+  const clamped = Math.min(Math.max(octaveOf(freq), lo), hi);
+  return OCTAVE_COLORS[clamped];
+}
+
 const LETTERS = ["Do", "Re", "Mi", "Fa", "Sol", "La", "Si"];
 const NATURAL_PCQ = { Do: 0, Re: 4, Mi: 8, Fa: 10, Sol: 14, La: 18, Si: 22 };
 
@@ -80,20 +99,23 @@ export function fullMapNotes(openFreq) {
   const baseQ = 24 * Math.log2(openFreq / 440);
   const notes = [];
   for (let k = 1; k <= 7; k++) {
-    const x = STRING_CM * (1 - Math.pow(2, -k / 12));
+    const f = openFreq * Math.pow(2, k / 12);
+    const x = STRING_CM * (1 - openFreq / f);
     if (x < 0 || x > NECK_CM) continue;
     const pc = pitchClassQuarters(baseQ + 2 * k);
     const info = SEMITONE_NAMES[Math.round(pc / 2) % 12];
     notes.push({
       x,
+      freq: f,
       label: info.letter + (info.kind === "bemol" ? "b" : ""),
       kind: info.kind,
       tonic: false,
     });
     if (info.kind === "natural") {
-      const xh = STRING_CM * (1 - Math.pow(2, -(2 * k - 1) / 24));
+      const fh = openFreq * Math.pow(2, (2 * k - 1) / 24);
+      const xh = STRING_CM * (1 - openFreq / fh);
       if (xh >= 0 && xh <= NECK_CM) {
-        notes.push({ x: xh, label: info.letter + "½", kind: "half-bemol", tonic: false });
+        notes.push({ x: xh, freq: fh, label: info.letter + "½", kind: "half-bemol", tonic: false });
       }
     }
   }
@@ -120,6 +142,7 @@ export function maqamNotes(openFreq, maqamName, tonicIndex) {
       const spelled = spellNote(letter, diff);
       found.push({
         x,
+        freq,
         label: spelled.label,
         kind: spelled.kind,
         tonic: d % 7 === 0,

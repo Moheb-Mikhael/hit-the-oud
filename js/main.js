@@ -1,4 +1,4 @@
-import { NECK_CM, TONICS, fullMapNotes, maqamNotes } from "./maqam.js";
+import { NECK_CM, fullMapNotes, maqamNotes, octaveColor } from "./maqam.js";
 
 const CANVAS_WIDTH = 1200;
 const CANVAS_HEIGHT = 300;
@@ -58,12 +58,22 @@ function drawNoteLabel(px, centerY, label) {
   ctx.fillText(label, px + 10, centerY);
 }
 
+function octaveRgba(freq) {
+  const hex = octaveColor(freq);
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, 0.85)`;
+}
+
 function drawNoteCircles(course, centerY) {
   const notes = courseNotesFor(course);
+  const octaveMode = activeMaqam !== "All";
   for (const note of notes) {
     const px = CANVAS_WIDTH - (note.x / NECK_CM) * CANVAS_WIDTH;
+    const ring = octaveMode ? octaveColor(note.freq) : null;
     if (note.tonic) {
-      ctx.strokeStyle = COLOR_ACTIVE;
+      ctx.strokeStyle = octaveMode ? ring : COLOR_ACTIVE;
       ctx.lineWidth = 2.4;
       ctx.beginPath();
       ctx.arc(px, centerY, 9, 0, TWO_PI);
@@ -74,19 +84,19 @@ function drawNoteCircles(course, centerY) {
       ctx.stroke();
       drawNoteLabel(px, centerY, note.label);
     } else if (note.kind === "natural") {
-      ctx.strokeStyle = "rgba(244, 235, 217, 0.85)";
+      ctx.strokeStyle = octaveMode ? ring : "rgba(244, 235, 217, 0.85)";
       ctx.lineWidth = 1.6;
       ctx.beginPath();
       ctx.arc(px, centerY, 6, 0, TWO_PI);
       ctx.stroke();
     } else if (note.kind === "half-bemol") {
-      ctx.fillStyle = COLOR_BASS;
+      ctx.fillStyle = octaveMode ? ring : COLOR_BASS;
       ctx.beginPath();
       ctx.arc(px, centerY, 5.5, 0, TWO_PI);
       ctx.fill();
       drawNoteLabel(px, centerY, note.label);
     } else {
-      ctx.strokeStyle = COLOR_ACTIVE;
+      ctx.strokeStyle = octaveMode ? ring : COLOR_ACTIVE;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(px, centerY, 7, 0, TWO_PI);
@@ -323,10 +333,11 @@ function renderFrame(now) {
     ctx.font = "13px 'Segoe UI', system-ui, sans-serif";
     ctx.textAlign = "right";
     ctx.textBaseline = "top";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
     active.forEach((state, k) => {
-      const label = frequencyFor(s, state.xCm).toFixed(1) + " Hz";
-      ctx.fillText(label, CANVAS_WIDTH - 12, zoneTop + 8 + k * 16);
+      const freq = frequencyFor(s, state.xCm);
+      ctx.fillStyle =
+        activeMaqam === "All" ? "rgba(255, 255, 255, 0.65)" : octaveRgba(freq);
+      ctx.fillText(freq.toFixed(1) + " Hz", CANVAS_WIDTH - 12, zoneTop + 8 + k * 16);
     });
   }
 
