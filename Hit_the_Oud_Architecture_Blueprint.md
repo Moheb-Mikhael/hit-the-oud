@@ -5,8 +5,7 @@
 ### 1. DSP Audio Engine (C++ Core) & Acoustic Timbre
 *   **Algorithm & Voices:** Implement a fully polyphonic Karplus-Strong string synthesis model capable of executing multiple independent circular buffers simultaneously. The engine runs 12 physical string voices organized as 6 unison-doubled courses, matching a real Arabic oud.
 *   **Memory Allocation:** Use dynamic allocation for the string buffers; the voice count is a constructor parameter, initialized as 12 voices (6 courses × 2 strings).
-*   **Reference Tuning:** The 6 course pitches (f_open) from lowest to highest must be explicitly initialized as [87.0, 110.0, 147.0, 196.0, 261.0, 350.0] Hz.
-*   **The Unison Detune (Chorus Effect):** Apply a randomized microtonal offset (e.g., +/- 0.3 Hz to +/- 0.8 Hz) to the second string of every pair to produce the authentic shimmering resonance.
+*   **Reference Tuning:** The 6 course pitches (f_open) from lowest to highest must be explicitly initialized as [87.0, 110.0, 147.0, 196.0, 261.0, 350.0] Hz. Each pair sounds in perfect unison with no detune offset.
 *   **Nylon/Gut Excitation & Bowl Resonance:** Pre-filter the initial white noise burst through a sharp low-pass filter to simulate a risha striking nylon/gut. The feedback loop must aggressively attenuate high-frequency harmonics to mimic the deep acoustic reflection of the wooden bowl.
 *   **Buffer Management:** Use linear interpolation when dynamically resizing the active buffer length. Dynamically adjust the low-pass filter coefficient to slightly brighten the tone as pitch increases.
 
